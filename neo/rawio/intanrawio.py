@@ -43,10 +43,10 @@ class IntanRawIO(BaseRawIO):
     def _parse_header(self):
 
         if self.filename.endswith('.rhs'):
-            self._global_info, self._ordered_channels, data_dtype,\
+            self._global_info, self._ordered_channels, self._event_channels, data_dtype,\
                 header_size, self._block_size = read_rhs(self.filename)
         elif self.filename.endswith('.rhd'):
-            self._global_info, self._ordered_channels, data_dtype,\
+            self._global_info, self._ordered_channels, self._event_channels, data_dtype,\
                 header_size, self._block_size = read_rhd(self.filename)
 
         # memmap raw data with the complicated structured dtype
@@ -83,6 +83,20 @@ class IntanRawIO(BaseRawIO):
 
         # No events
         event_channels = []
+        for c, chan_info in enumerate(self._event_channels):
+            name = chan_info['native_channel_name'] # Could do custom too
+            if chan_info['signal_type'] == 4:
+                prefix = 'I-'
+            elif chan_info['signal_type'] == 5:
+                prefix = 'O-'
+            chan_id = "%s%d"%(prefix,chan_info['native_order'])
+            if chan_id == "I-0":
+                # This is our event channel that sends the digital codes
+                chan_type = 'event'
+            else:
+                chan_type = 'epoch' # epoch or event
+            event_channels.append((name, chan_id, chan_type))
+
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
@@ -156,6 +170,61 @@ class IntanRawIO(BaseRawIO):
                 sigs_chunk[:, i] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
 
         return sigs_chunk
+
+    # event and epoch zone
+    def _get_dig_channel(self, event_channel_index):
+        event_channel = self.header['event_channels'][event_channel_index]
+        samplerate = self._max_sampling_rate
+        if event_channel['id'].startswith('I-'):
+            raw_data_name = 'DIGITAL-IN'
+        else:
+            assert(event_channel['id'].startswith('O-'))
+            raw_data_name = 'DIGITAL-OUT'
+        chan_index = int(event_channel['id'].split('-')[-1])
+        
+        dig_data = np.not_equal(np.bitwise_and(self._raw_data[raw_data_name].flatten(), (1<<chan_index)),0)
+
+        # if data is mostly ones then flip it
+        if dig_data.mean() > .5:
+            dig_data = ~dig_data
+
+        if event_channel['type'] == b'epoch':
+            dig_data = np.diff(dig_data.astype(np.int8))
+        return dig_data, samplerate
+    
+    def _event_count(self, block_index, seg_index, event_channel_index):
+        dig_data, _ = self._get_dig_channel(event_channel_index)
+        return np.sum(dig_data == 1)
+
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
+        dig_data, sr = self._get_dig_channel(event_channel_index)
+        time_on = np.where(dig_data == 1)[0]
+        time_off = np.where(dig_data == -1)[0]
+        if len(time_off) == 0:
+            durations = np.zeros_like(time_on)
+        else:
+            if time_off[0] < time_on[0]:
+                time_on = np.insert(time_on,0,0,axis=0)
+                #time_off = time_off[1:]
+            if time_off[-1] < time_on[-1]:
+                time_off = np.insert(time_off,-1,len(dig_data)-1,axis=0)
+                #time_on = time_on[:-1]
+            assert(len(time_on) == len(time_off))
+            durations = time_off - time_on
+
+        durations = durations / sr
+        timestamp = time_on / sr
+        if t_start is not None:
+            timestamp = timestamp[timestamp > t_start]
+        if t_stop is not None:
+            timestamp = timestamp[timestamp < t_stop]
+        return timestamp, durations, None # no labels
+
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
+        return np.asarray(event_timestamps, dtype=dtype)
+        
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
+        return np.asarray(raw_duration, dtype=dtype)
 
 
 def read_qstring(f):
@@ -325,6 +394,7 @@ def read_rhs(filename):
             ordered_channels.append(chan_info)
             data_dtype += [(name, 'uint16', BLOCK_SIZE)]
 
+    event_channels = []
     # 5: Digital input channel.
     # 6: Digital output channel.
     for sig_type in [5, 6]:
@@ -333,8 +403,13 @@ def read_rhs(filename):
         if len(channels_by_type[sig_type]) > 0:
             name = {5: 'DIGITAL-IN', 6: 'DIGITAL-OUT'}[sig_type]
             data_dtype += [(name, 'uint16', BLOCK_SIZE)]
+        
+            for chan_info in channels_by_type[sig_type]:
+                chan_info['sampling_rate'] = sr
+                chan_info['units'] = 'Bool'
+                event_channels.append(chan_info)
 
-    return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE
+    return global_info, ordered_channels, event_channels, data_dtype, header_size, BLOCK_SIZE
 
 
 ###############
@@ -536,13 +611,21 @@ def read_rhd(filename):
         ordered_channels.append(chan_info)
         data_dtype += [(name, 'uint16', BLOCK_SIZE)]
 
+    event_channels = []
     # 4: USB board digital input channel
     # 5: USB board digital output channel
     for sig_type in [4, 5]:
         # at the moment theses channel are not in sig channel list
         # but they are in the raw memamp
+        # Note these channels are all encoded in the raw memmamp one channel
         if len(channels_by_type[sig_type]) > 0:
             name = {4: 'DIGITAL-IN', 5: 'DIGITAL-OUT'}[sig_type]
             data_dtype += [(name, 'uint16', BLOCK_SIZE)]
 
-    return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE
+            for chan_info in channels_by_type[sig_type]:
+                chan_info['sampling_rate'] = sr
+                chan_info['units'] = 'Bool'
+                event_channels.append(chan_info)
+
+    return global_info, ordered_channels, event_channels, data_dtype, header_size, BLOCK_SIZE
+

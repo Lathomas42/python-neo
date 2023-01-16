@@ -670,7 +670,7 @@ class BaseRawIO:
         Sometimes it is the index on the signal but not always.
         The conversion to second or index_on_signal is done outside this method.
 
-        t_start/t_sop are limits in seconds.
+        t_start/t_stop are limits in seconds.
 
         returns
             timestamp
