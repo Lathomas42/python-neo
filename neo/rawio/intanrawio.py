@@ -54,7 +54,14 @@ class IntanRawIO(BaseRawIO):
 
         # check timestamp continuity
         timestamp = self._raw_data['timestamp'].flatten()
-        assert np.all(np.diff(timestamp) == 1), 'timestamp have gaps'
+
+        if np.all(np.diff(timestamp) == 1):
+            print('No missing timestamps in data.')
+        else:
+            gaps, num_gaps = np.unique(np.diff(timestamp),return_counts=True)
+            print('Warning: {0} gaps in timestamp data found.  Time scale will not be uniform!'.format(num_gaps))
+            print("Gaps are: %s \tgap counts are :%s"%(gaps,num_gaps))
+        #assert np.all(np.diff(timestamp) == 1), 'timestamp have gaps'
 
         # signals
         signal_channels = []
