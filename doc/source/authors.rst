@@ -60,8 +60,25 @@ and may not be the current affiliation of a contributor.
 * Etienne Combrisson [6]
 * Ben Dichter [24]
 * Elodie Legouée [21]
+* Oliver Kloss [13]
 * Heberto Mayorquin [24]
 * Thomas Perret [25]
+* Kyle Johnsen [26, 27]
+* Zach McKenzie [28]
+* Moritz Alexander Kern
+* Joscha Schmiedt
+* Daniel P. Crepeau
+* Divyansh Gupta
+* Nate Dolensek
+* Philipp Hornauer
+* Robert Wolff
+* Jules Lebert
+* Benjamin Heasly
+* Baptiste Grimaud
+* Cody Baker
+* Fernando J. Chaure
+* Filipe*github
+* Matthias Klumpp
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -88,6 +105,9 @@ and may not be the current affiliation of a contributor.
 23. Bio Engineering Laboratory, DBSSE, ETH, Basel, Switzerland
 24. CatalystNeuro
 25. Institut des Sciences Cognitives Marc Jeannerod, CNRS UMR5229, Lyon, France
+26. Georgia Institute of Technology
+27. Emory University
+28. Harvard Medical School
 
 If we've somehow missed you off the list we're very sorry - please let us know.
 
@@ -101,6 +121,9 @@ Acknowledgements
    :width: 156px
    :align: right
 
-Neo was developed in part in the Human Brain Project,
-funded from the European Union's Horizon 2020 Framework Programme for Research and Innovation
-under Specific Grant Agreements No. 720270 and No. 785907 (Human Brain Project SGA1 and SGA2).
+Development of Neo has been partially funded by the European Union Sixth Framework Program (FP6) under
+grant agreement FETPI-015879 (FACETS), by the European Union Seventh Framework Program (FP7/2007­-2013)
+under grant agreements no. 269921 (BrainScaleS) and no. 604102 (HBP),
+and by the European Union's Horizon 2020 Framework Programme for
+Research and Innovation under the Specific Grant Agreements No. 720270 (Human Brain Project SGA1),
+No. 785907 (Human Brain Project SGA2) and No. 945539 (Human Brain Project SGA3).

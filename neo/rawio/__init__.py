@@ -1,6 +1,6 @@
 """
-:mod:`neo.rawio` provides classes for reading with low level API
-electrophysiological data files.
+:mod:`neo.rawio` provides classes for reading
+electrophysiological data files with a low-level API
 
 :attr:`neo.rawio.rawiolist` provides a list of successfully imported rawio
 classes.
@@ -20,10 +20,11 @@ Classes:
 * :attr:`BlackrockRawIO`
 * :attr:`BrainVisionRawIO`
 * :attr:`CedRawIO`
-* :attr: `EDFRawIO`
+* :attr:`EDFRawIO`
 * :attr:`ElanRawIO`
 * :attr:`IntanRawIO`
 * :attr:`MaxwellRawIO`
+* :attr:`MedRawIO`
 * :attr:`MEArecRawIO`
 * :attr:`MicromedRawIO`
 * :attr:`NeuralynxRawIO`
@@ -34,6 +35,7 @@ Classes:
 * :attr:`OpenEphysBinaryRawIO`
 * :attr:`PhyRawIO`
 * :attr:`PlexonRawIO`
+* :attr:`Plexon2RawIO`
 * :attr:`RawBinarySignalRawIO`
 * :attr:`RawMCSRawIO`
 * :attr:`Spike2RawIO`
@@ -92,6 +94,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.MedRawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.MEArecRawIO
 
     .. autoattribute:: extensions
@@ -132,6 +138,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.Plexon2RawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.RawBinarySignalRawIO
 
     .. autoattribute:: extensions
@@ -165,6 +175,7 @@ Classes:
     .. autoattribute:: extensions
 
 """
+
 import os
 
 from neo.rawio.alphaomegarawio import AlphaOmegaRawIO
@@ -181,6 +192,7 @@ from neo.rawio.examplerawio import ExampleRawIO
 from neo.rawio.intanrawio import IntanRawIO
 from neo.rawio.maxwellrawio import MaxwellRawIO
 from neo.rawio.mearecrawio import MEArecRawIO
+from neo.rawio.medrawio import MedRawIO
 from neo.rawio.micromedrawio import MicromedRawIO
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuroexplorerrawio import NeuroExplorerRawIO
@@ -190,6 +202,7 @@ from neo.rawio.openephysrawio import OpenEphysRawIO
 from neo.rawio.openephysbinaryrawio import OpenEphysBinaryRawIO
 from neo.rawio.phyrawio import PhyRawIO
 from neo.rawio.plexonrawio import PlexonRawIO
+from neo.rawio.plexon2rawio import Plexon2RawIO
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
 from neo.rawio.rawmcsrawio import RawMCSRawIO
 from neo.rawio.spike2rawio import Spike2RawIO
@@ -214,6 +227,7 @@ rawiolist = [
     MicromedRawIO,
     MaxwellRawIO,
     MEArecRawIO,
+    MedRawIO,
     NeuralynxRawIO,
     NeuroExplorerRawIO,
     NeuroScopeRawIO,
@@ -222,6 +236,7 @@ rawiolist = [
     OpenEphysBinaryRawIO,
     PhyRawIO,
     PlexonRawIO,
+    Plexon2RawIO,
     RawBinarySignalRawIO,
     RawMCSRawIO,
     Spike2RawIO,
@@ -234,6 +249,18 @@ rawiolist = [
 
 
 def get_rawio_class(filename_or_dirname):
+    """Legacy function for returning class guess from file extension
+    DEPRECATED
+    """
+
+    import warnings
+
+    warnings.warn("get_rawio_class is deprecated. In the future please use get_rawio")
+
+    return get_rawio(filename_or_dirname)
+
+
+def get_rawio(filename_or_dirname):
     """
     Return a neo.rawio class guess from file extension.
     """

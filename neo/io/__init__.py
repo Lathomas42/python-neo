@@ -39,6 +39,7 @@ Classes:
 * :attr:`KlustaKwikIO`
 * :attr:`KwikIO`
 * :attr:`MaxwellIO`
+* :attr:`MedIO`
 * :attr:`MicromedIO`
 * :attr:`NeoMatlabIO`
 * :attr:`NestIO`
@@ -53,6 +54,7 @@ Classes:
 * :attr:`PhyIO`
 * :attr:`PickleIO`
 * :attr:`PlexonIO`
+* :attr:`Plexon2IO`
 * :attr:`RawBinarySignalIO`
 * :attr:`RawMCSIO`
 * :attr:`Spike2IO`
@@ -164,6 +166,10 @@ Classes:
 .. autoclass:: neo.io.MaxwellIO
 
     .. autoattribute:: extensions
+    
+.. autoclass:: neo.io.MedIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.MicromedIO
 
@@ -221,6 +227,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.io.Plexon2IO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.RawBinarySignalIO
 
     .. autoattribute:: extensions
@@ -273,12 +283,14 @@ try:
     import neuroshare as ns
 except ImportError as err:
     from neo.io.neurosharectypesio import NeurosharectypesIO as NeuroshareIO
+
     # print("\n neuroshare library not found, loading data with ctypes" )
     # print("\n to use the API be sure to install the library found at:")
     # print("\n www.http://pythonhosted.org/neuroshare/")
 
 else:
     from neo.io.neuroshareapiio import NeuroshareapiIO as NeuroshareIO
+
     # print("neuroshare library successfully imported")
     # print("\n loading with API...")
 
@@ -308,6 +320,7 @@ from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
 from neo.io.mearecio import MEArecIO
 from neo.io.maxwellio import MaxwellIO
+from neo.io.medio import MedIO
 from neo.io.micromedio import MicromedIO
 from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.nestio import NestIO
@@ -322,6 +335,7 @@ from neo.io.openephysbinaryio import OpenEphysBinaryIO
 from neo.io.phyio import PhyIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
+from neo.io.plexon2io import Plexon2IO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
 from neo.io.rawmcsio import RawMCSIO
 from neo.io.spike2io import Spike2IO
@@ -360,6 +374,7 @@ iolist = [
     KwikIO,
     MEArecIO,
     MaxwellIO,
+    MedIO,
     MicromedIO,
     NixIO,
     NixIOFr,
@@ -375,6 +390,7 @@ iolist = [
     PhyIO,
     PickleIO,
     PlexonIO,
+    Plexon2IO,
     RawBinarySignalIO,
     RawMCSIO,
     Spike2IO,
@@ -384,7 +400,7 @@ iolist = [
     TdtIO,
     TiffIO,
     WinEdrIO,
-    WinWcpIO
+    WinWcpIO,
 ]
 
 # for each supported extension list the ios supporting it
@@ -410,7 +426,7 @@ def get_io(file_or_folder, *args, **kwargs):
     raise IOError(f"Could not identify IO for {file_or_folder}")
 
 
-def list_candidate_ios(file_or_folder, ignore_patterns=['*.ini', 'README.txt', 'README.md']):
+def list_candidate_ios(file_or_folder, ignore_patterns=["*.ini", "README.txt", "README.md"]):
     """
     Identify neo IO that can potentially load data in the file or folder
 
@@ -432,29 +448,44 @@ def list_candidate_ios(file_or_folder, ignore_patterns=['*.ini', 'README.txt', '
     if file_or_folder.is_file():
         suffix = file_or_folder.suffix[1:].lower()
         if suffix not in io_by_extension:
-            raise ValueError(f'{suffix} is not a supported format of any IO.')
+            raise ValueError(f"{suffix} is not a supported format of any IO.")
         return io_by_extension[suffix]
 
     elif file_or_folder.is_dir():
         # scan files in folder to determine io type
-        filenames = [f for f in file_or_folder.glob('*') if f.is_file()]
+        filenames = [f for f in file_or_folder.glob("*") if f.is_file()]
         # keep only relevant filenames
         filenames = [f for f in filenames if f.suffix and not any([f.match(p) for p in ignore_patterns])]
 
         # if no files are found in the folder, check subfolders
         # this is necessary for nested-folder based formats like spikeglx
         if not filenames:
-            filenames = [f for f in file_or_folder.glob('**/*') if f.is_file()]
+            filenames = [f for f in file_or_folder.glob("**/*") if f.is_file()]
             # keep only relevant filenames
             filenames = [f for f in filenames if f.suffix and not any([f.match(p) for p in ignore_patterns])]
 
     # if only file prefix was provided, e.g /mydatafolder/session1-
     # to select all files sharing the `session1-` prefix
     elif file_or_folder.parent.exists():
-        filenames = file_or_folder.parent.glob(file_or_folder.name + '*')
+        filenames = list(file_or_folder.parent.glob(file_or_folder.name + "*"))
+        # if filenames empty and suffix is provided then non-existent file
+        # may be written in current dir. So run check for io
+        if len(filenames) == 0 and file_or_folder.suffix:
+            suffix = file_or_folder.suffix[1:].lower()
+            if suffix not in io_by_extension:
+                raise ValueError(f"{suffix} is not a supported format of any IO.")
+            return io_by_extension[suffix]
+
+    # If non-existent file in non-existent dir is given check if this
+    # structure could be created with an io writing the file
+    elif file_or_folder.suffix:
+        suffix = file_or_folder.suffix[1:].lower()
+        if suffix not in io_by_extension:
+            raise ValueError(f"{suffix} is not a supported format of any IO.")
+        return io_by_extension[suffix]
 
     else:
-        raise ValueError(f'{file_or_folder} does not contain data files of a supported format')
+        raise ValueError(f"{file_or_folder} does not contain data files of a supported format")
 
     # find the io that fits the best with the files contained in the folder
     potential_ios = []
@@ -465,7 +496,7 @@ def list_candidate_ios(file_or_folder, ignore_patterns=['*.ini', 'README.txt', '
                 potential_ios.extend(io_by_extension[suffix])
 
     if not potential_ios:
-        raise ValueError(f'Could not determine IO to load {file_or_folder}')
+        raise ValueError(f"Could not determine IO to load {file_or_folder}")
 
     # return ios ordered by number of files supported
     counter = Counter(potential_ios).most_common()
